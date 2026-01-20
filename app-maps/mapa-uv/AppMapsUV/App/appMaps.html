@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Mapa Campus Ingeniería UV</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../CSS/MapsCSS.css"/>
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="app-title">
+            <span> Campus Ingeniería UV</span>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" id="toggleTheme">🌙</button>
+        </div>
+    </header>
+
+    <!-- Main container -->
+    <main class="app-main">
+        <div class="map-container">
+            <!-- Loader -->
+            <div id="map-loader">
+                <div class="spinner"></div>
+                <div class="loader-text">Cargando mapa...</div>
+            </div>
+
+            <!-- SVG Display -->
+            <div id="svgDisplay">
+                <div id="svgContent"></div>
+            </div>
+
+            <!-- Controles de zoom -->
+            <div class="controls-top">
+                <button class="btn primary" id="zoomIn" title="Acercar">+</button>
+                <button class="btn primary" id="zoomReset" title="Restablecer">⊙</button>
+                <button class="btn primary" id="zoomOut" title="Alejar">−</button>
+            </div>
+
+            <!-- Info badge -->
+            <div class="info-badge" id="infoBadge">
+                <strong>Distancia:</strong> <span id="distanceInfo">-</span>
+            </div>
+        </div>
+
+        <!-- Panel inferior -->
+        <div class="bottom-panel">
+            <div class="panel-title">
+                📍 Buscar Ruta
+            </div>
+
+            <div class="select-row">
+                <div class="select-group">
+                    <label for="selectOrigen">Origen</label>
+                    <select id="selectOrigen">
+                        <option value="">Seleccionar origen...</option>
+                    </select>
+                </div>
+
+                <div class="select-group">
+                    <label for="selectDestino">Destino</label>
+                    <select id="selectDestino">
+                        <option value="">Seleccionar destino...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn large primary" id="btnCalcularRuta">
+                    🚀 Calcular Ruta
+                </button>
+                <button class="btn large secondary" id="btnLimpiar">
+                    🔄 Limpiar
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script src="../JS/logicMaps.js"></script>
+</body>
+</html>

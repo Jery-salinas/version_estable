@@ -1,0 +1,5 @@
+# No dependencies required for the basic optimizer (uses Python stdlib)
+# If you want advanced path simplification, consider adding:
+# svgpathtools
+# shapely
+# lxml

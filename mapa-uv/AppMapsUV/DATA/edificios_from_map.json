@@ -1,0 +1,64 @@
+{
+  "edificios": [
+    {
+      "id": "entrada_principal",
+      "nombre": "Entrada Principal",
+      "x": 355,
+      "y": 720,
+      "categoria": "acceso"
+    },
+    {
+      "id": "edificio_a",
+      "nombre": "Edificio A",
+      "x": 350,
+      "y": 85,
+      "categoria": "academico"
+    },
+    {
+      "id": "cafeteria",
+      "nombre": "Cafetería",
+      "x": 310,
+      "y": 255,
+      "categoria": "servicios"
+    },
+    {
+      "id": "edificio_p",
+      "nombre": "Edificio P",
+      "x": 230,
+      "y": 680,
+      "categoria": "academico"
+    }
+  ],
+  "waypoints": [
+    {"id": "wp1", "x": 355, "y": 680, "descripcion": "Inicio camino sur"},
+    {"id": "wp2", "x": 340, "y": 620, "descripcion": "Curva 1"},
+    {"id": "wp3", "x": 320, "y": 550, "descripcion": "Pasillo central 1"},
+    {"id": "wp4", "x": 310, "y": 480, "descripcion": "Pasillo central 2"},
+    {"id": "wp5", "x": 305, "y": 400, "descripcion": "Pasillo central 3"},
+    {"id": "wp6", "x": 310, "y": 320, "descripcion": "Cruce cafetería"},
+    {"id": "wp7", "x": 320, "y": 250, "descripcion": "Norte cafetería"},
+    {"id": "wp8", "x": 340, "y": 180, "descripcion": "Pasillo norte"},
+    {"id": "wp9", "x": 350, "y": 120, "descripcion": "Acceso Edificio A"},
+    {"id": "wp10", "x": 280, "y": 550, "descripcion": "Desvío oeste 1"},
+    {"id": "wp11", "x": 250, "y": 600, "descripcion": "Desvío oeste 2"},
+    {"id": "wp12", "x": 235, "y": 650, "descripcion": "Acceso Edificio P"}
+  ],
+  "rutas": {
+    "entrada_principal_to_edificio_a": {
+      "nombre": "Entrada Principal → Edificio A",
+      "origen": "entrada_principal",
+      "destino": "edificio_a",
+      "waypoints": ["wp1", "wp2", "wp3", "wp4", "wp5", "wp6", "wp7", "wp8", "wp9"],
+      "distancia_estimada": "450m",
+      "tiempo_estimado": "5-6 min"
+    },
+    "cafeteria_to_edificio_p": {
+      "nombre": "Cafetería → Edificio P",
+      "origen": "cafeteria",
+      "destino": "edificio_p",
+      "waypoints": ["wp6", "wp5", "wp4", "wp3", "wp10", "wp11", "wp12"],
+      "distancia_estimada": "320m",
+      "tiempo_estimado": "4 min"
+    }
+  }
+}

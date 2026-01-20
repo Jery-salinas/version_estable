@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Optimizador SVG - Campus UV (funcional)</title>
+<style>
+  :root{
+    --accent:#00a862;
+    --accent-2:#4ade80;
+    --bg-1:#0f1724;
+    --panel:#0f2b3f;
+    --muted:#a3e6c5;
+    --glass: rgba(255,255,255,0.02);
+  }
+  html,body{height:100%;margin:0;font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;background:
+    linear-gradient(135deg,#0b1020,#071025);color:#eee;padding:18px;}
+  .container{max-width:1200px;margin:0 auto;display:grid;gap:18px;}
+  header{background:linear-gradient(135deg,var(--accent),#005234);padding:18px;border-radius:14px;border:2px solid rgba(0,168,98,0.2);box-shadow:0 8px 30px rgba(0,0,0,0.4)}
+  h1{margin:0;font-size:20px}
+  .top-row{display:grid;grid-template-columns:1fr 360px;gap:18px;}
+  .panel{background:rgba(10,18,30,0.7);padding:14px;border-radius:12px;border:1px solid rgba(0,168,98,0.08);box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+  .upload-area{border:2px dashed var(--accent);border-radius:10px;padding:22px;text-align:center;cursor:pointer;background:linear-gradient(180deg, rgba(0,120,73,0.02), transparent)}
+  .upload-area.dragover{background:rgba(0,168,98,0.06);transform:scale(1.01)}
+  input[type=file]{display:none}
+  .controls-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+  .control-card{padding:12px;background:var(--glass);border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+  .checkbox-item{display:flex;gap:8px;align-items:center;padding:6px;border-radius:6px}
+  label{user-select:none}
+  .slider-row{display:flex;align-items:center;gap:12px}
+  input[type=range]{width:100%}
+  button{background:linear-gradient(135deg,var(--accent-2),var(--accent));border:none;padding:10px 14px;border-radius:10px;color:#082018;font-weight:700;cursor:pointer}
+  button.secondary{background:linear-gradient(135deg,#0b1320,#0f2b3f);color:var(--accent-2);border:1px solid rgba(0,168,98,0.12)}
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+  .stat{padding:10px;border-radius:8px;background:linear-gradient(135deg, rgba(0,168,98,0.04), rgba(0,120,73,0.02));text-align:center}
+  .map-viewer{height:520px;border-radius:12px;position:relative;overflow:hidden;border:1px solid rgba(0,168,98,0.08);display:flex;flex-direction:column}
+  #svgDisplay{flex:1;background:#071426;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+  #svgContainer{width:100%;height:100%;transform-origin:center center;cursor:grab}
+  #svgContainer:active{cursor:grabbing}
+  .viewer-controls{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:8px;z-index:50}
+  .viewer-btn{width:44px;height:44px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);color:var(--accent-2);font-weight:700;cursor:pointer}
+  .log{height:200px;overflow:auto;background:rgba(0,0,0,0.35);padding:10px;border-radius:8px;font-family:monospace;font-size:13px}
+  .log-entry{padding:8px;border-radius:6px;margin-bottom:6px}
+  .info{border-left:4px solid #64dfdf;color:#bfeff0}
+  .success{border-left:4px solid var(--accent-2);color:#cfffda}
+  .warn{border-left:4px solid #fbbf24;color:#ffefc7}
+  .err{border-left:4px solid #ef4444;color:#ffd6d6}
+  .progress {height:18px;background:rgba(255,255,255,0.03);border-radius:9px;overflow:hidden;margin-top:8px}
+  .progress > .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .25s}
+  .coord-output{background:#04121a;padding:10px;border-radius:8px;color:var(--accent-2);font-family:monospace;max-height:220px;overflow:auto}
+  .hidden-measure {position:absolute;left:-9999px;top:-9999px;visibility:hidden;width:800px;height:600px}
+  @media(max-width:980px){
+    .top-row{grid-template-columns:1fr}
+    .controls-grid{grid-template-columns:1fr}
+    .stats-grid{grid-template-columns:repeat(2,1fr)}
+    .map-viewer{height:420px}
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚡ Optimizador SVG - Campus Ingeniería UV (funcional)</h1>
+      <p style="color:var(--muted);margin-top:8px;font-size:13px">Carga SVG de AutoCAD, optimiza y extrae coordenadas de edificios</p>
+    </header>
+
+    <div class="top-row">
+      <!-- LEFT: Upload and controls -->
+      <div class="panel">
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between">
+          <strong>📂 Cargar Archivo SVG</strong>
+          <small style="color:var(--muted)">Soporta .svg</small>
+        </div>
+
+        <div id="uploadArea" class="upload-area" title="Haz clic o arrastra un SVG">
+          <div style="font-size:26px">🗺️</div>
+          <div style="margin-top:8px;color:var(--muted)">Arrastra tu SVG aquí o haz clic para seleccionar</div>
+          <input id="fileInput" type="file" accept=".svg" />
+          <div id="fileInfo" style="margin-top:8px;color:var(--accent-2);display:none"></div>
+        </div>
+
+        <div class="controls-grid">
+          <div class="control-card">
+            <strong>🗑️ Limpieza Básica</strong>
+            <div style="margin-top:8px">
+              <div class="checkbox-item"><input type="checkbox" id="removeMetadata" checked><label for="removeMetadata">Eliminar &lt;metadata&gt;, &lt;desc&gt;, &lt;title&gt;</label></div>
+              <div class="checkbox-item"><input type="checkbox" id="removeComments" checked><label for="removeComments">Eliminar comentarios</label></div>
+              <div class="checkbox-item"><input type="checkbox" id="removeHidden" checked><label for="removeHidden">Eliminar elementos ocultos (display:none / visibility:hidden / opacity:0)</label></div>
+              <div class="checkbox-item"><input type="checkbox" id="removeEmptyGroups" checked><label for="removeEmptyGroups">Eliminar grupos vacíos (&lt;g&gt; sin contenido)</label></div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <strong>✂️ Geometría</strong>
+            <div style="margin-top:8px">
+              <div class="checkbox-item"><input type="checkbox" id="simplifyPaths" checked><label for="simplifyPaths">Redondear coordenadas (precisión)</label></div>
+              <div class="checkbox-item"><input type="checkbox" id="removeSmallElements" checked><label for="removeSmallElements">Eliminar elementos muy pequeños</label></div>
+              <div class="checkbox-item"><input type="checkbox" id="removeDuplicates" checked><label for="removeDuplicates">Eliminar duplicados (misma definición)</label></div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <strong>🎨 Visual</strong>
+            <div style="margin-top:8px">
+              <div class="checkbox-item"><input type="checkbox" id="removeUnusedDefs" checked><label for="removeUnusedDefs">Eliminar &lt;defs&gt; no referenciadas</label></div>
+              <div class="checkbox-item"><input type="checkbox" id="removeDefaultStyles" checked><label for="removeDefaultStyles">Eliminar estilos vacíos o por defecto</label></div>
+            </div>
+          </div>
+
+          <div class="control-card">
+            <strong>🔢 Precisión / Umbrales</strong>
+            <div style="margin-top:8px">
+              <div class="slider-row"><label style="width:120px">Decimales:</label><input id="decimalPrecision" type="range" min="0" max="4" step="1" value="1"><span id="decimalValue" style="width:26px;text-align:center">1</span></div>
+              <div style="height:8px"></div>
+              <div class="slider-row"><label style="width:120px">Simplif. nivel:</label><input id="simplificationLevel" type="range" min="0" max="10" step="1" value="5"><span id="simplificationValue" style="width:26px;text-align:center">5</span></div>
+              <div style="height:8px"></div>
+              <div class="slider-row"><label style="width:120px">Umbral px (eliminar <1px):</label><input id="smallThreshold" type="range" min="0" max="10" step="0.5" value="1"><span id="smallValue" style="width:36px;text-align:center">1</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button id="optimizeBtn" disabled>🚀 OPTIMIZAR SVG</button>
+          <button id="resetBtn" class="secondary">♻️ REINICIAR</button>
+        </div>
+
+        <div class="progress" id="progressWrap" style="display:none"><div class="bar" id="progressBar"></div></div>
+
+        <div class="stats-grid" style="margin-top:10px">
+          <div class="stat"><small>Tamaño original</small><div id="originalSize">-</div></div>
+          <div class="stat"><small>Tamaño optimizado</small><div id="optimizedSize">-</div></div>
+          <div class="stat"><small>Reducción</small><div id="reduction">-</div></div>
+          <div class="stat"><small>Elementos removidos</small><div id="elementsRemoved">-</div></div>
+        </div>
+
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button id="downloadBtn" class="secondary" disabled>💾 Descargar SVG</button>
+          <button id="extractCoordsBtn" class="secondary" disabled>📍 Extraer Coordenadas (JSON)</button>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Preview -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="panel map-viewer">
+          <strong style="padding:12px">🗺️ Visualizador</strong>
+          <div id="svgDisplay">
+            <div id="svgContainer" aria-hidden="true">
+              <div style="color:var(--muted);display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:6px;">
+                <div style="font-size:28px">🗺️</div>
+                <div>El mapa aparecerá aquí al cargar un SVG</div>
+              </div>
+            </div>
+
+            <div class="viewer-controls">
+              <div class="viewer-btn" id="zoomIn" title="Acercar">+</div>
+              <div class="viewer-btn" id="zoomReset" title="Reset">⊙</div>
+              <div class="viewer-btn" id="zoomOut" title="Alejar">−</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <strong>📋 Log de proceso</strong>
+          <div class="log" id="logContainer">
+            <div class="log-entry info">💡 Sistema listo. Carga un archivo SVG para comenzar.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results area: JSON and coords -->
+    <div style="display:grid;grid-template-columns:1fr 420px;gap:12px">
+      <div class="panel">
+        <strong>📍 JSON de coordenadas</strong>
+        <div style="margin-top:8px;color:var(--muted)">Aquí aparecerá el JSON con los edificios detectados y sus bounding boxes. Puedes copiar o descargar.</div>
+        <div class="coord-output" id="coordOutput" style="margin-top:10px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="copyCoordsBtn" class="secondary" disabled>📋 Copiar JSON</button>
+          <button id="downloadJsonBtn" class="secondary" disabled>⬇ Descargar JSON</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <strong>⚙️ Herramientas rápidas</strong>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+          <button id="toggleHiddenEls" class="secondary">🔍 Resaltar elementos ocultos</button>
+          <button id="toggleDefsList" class="secondary">📚 Ver &lt;defs&gt; usadas</button>
+        </div>
+        <div id="auxInfo" style="margin-top:10px;color:var(--muted);font-size:13px"></div>
+      </div>
+    </div>
+
+    <!-- hidden area to measure with getBBox -->
+    <div id="hiddenMeasure" class="hidden-measure" aria-hidden="true"></div>
+  </div>
+
+<script>
+/*
+  Optimizador SVG (versión ligera, cliente)
+  - Manipula XML DOM del SVG para aplicar limpiezas simples
+  - Redondea números, elimina metadata, comentarios, grupos vacíos, elementos ocultos
+  - Elimina <defs> no referenciadas
+  - Elimina duplicados por stringificado
+  - Extrae lista de "edificios" (heurística: géneros de shape) con bbox y centroid
+  - Muestra preview, permite zoom/pan, descarga y copia JSON
+*/
+
+/* ------------------------------
+   Utilidades DOM y UI
+   ------------------------------ */
+const qs = s => document.querySelector(s);
+const qsa = s => Array.from(document.querySelectorAll(s));
+const uploadArea = qs('#uploadArea');
+const fileInput = qs('#fileInput');
+const fileInfo = qs('#fileInfo');
+const optimizeBtn = qs('#optimizeBtn');
+const resetBtn = qs('#resetBtn');
+const downloadBtn = qs('#downloadBtn');
+const extractCoordsBtn = qs('#extractCoordsBtn');
+const copyCoordsBtn = qs('#copyCoordsBtn');
+const downloadJsonBtn = qs('#downloadJsonBtn');
+const coordOutput = qs('#coordOutput');
+const logContainer = qs('#logContainer');
+const progressWrap = qs('#progressWrap');
+const progressBar = qs('#progressBar');
+const originalSizeEl = qs('#originalSize');
+const optimizedSizeEl = qs('#optimizedSize');
+const reductionEl = qs('#reduction');
+const elementsRemovedEl = qs('#elementsRemoved');
+const svgContainer = qs('#svgContainer');
+const svgDisplay = qs('#svgDisplay');
+const hiddenMeasure = qs('#hiddenMeasure');
+const auxInfo = qs('#auxInfo');
+
+const decimalSlider = qs('#decimalPrecision');
+const decimalValue = qs('#decimalValue');
+const simplificationSlider = qs('#simplificationLevel');
+const simplificationValue = qs('#simplificationValue');
+const smallThreshold = qs('#smallThreshold');
+const smallValue = qs('#smallValue');
+
+const checkRemoveMetadata = qs('#removeMetadata');
+const checkRemoveComments = qs('#removeComments');
+const checkRemoveHidden = qs('#removeHidden');
+const checkRemoveEmptyGroups = qs('#removeEmptyGroups');
+const checkSimplifyPaths = qs('#simplifyPaths');
+const checkRemoveSmallElements = qs('#removeSmallElements');
+const checkRemoveDuplicates = qs('#removeDuplicates');
+const checkRemoveUnusedDefs = qs('#removeUnusedDefs');
+const checkRemoveDefaultStyles = qs('#removeDefaultStyles');
+
+let rawSvgText = null;
+let optimizedSvgText = null;
+let originalSize = 0;
+let removedCount = 0;
+
+/* Logging */
+function addLog(text, level='info'){
+  const el = document.createElement('div');
+  el.className = `log-entry ${level==='error'?'err':level==='warn'?'warn':level==='success'?'success':'info'}`;
+  el.textContent = `${text}`;
+  logContainer.prepend(el);
+}
+
+/* Alerts (temporal usando log como reemplazo) */
+function showAlert(msg, type='info'){ addLog(msg, type==='error'?'error': type==='warn'?'warn': type==='success'?'success':'info'); }
+
+/* format bytes */
+function formatBytes(bytes){
+  if(!bytes) return '-';
+  const sizes = ['B','KB','MB','GB'];
+  const i = Math.floor(Math.log(bytes)/Math.log(1024));
+  return +(bytes/Math.pow(1024,i)).toFixed(2)+' '+sizes[i];
+}
+
+/* Progress */
+function showProgress(percentage){
+  progressWrap.style.display='block';
+  progressBar.style.width = Math.max(0,Math.min(100,percentage)) + '%';
+  if(percentage>=100) setTimeout(()=>{progressWrap.style.display='none';progressBar.style.width='0%';},600);
+}
+
+/* update sliders display */
+decimalSlider.addEventListener('input', ()=> decimalValue.textContent = decimalSlider.value);
+simplificationSlider.addEventListener('input', ()=> simplificationValue.textContent = simplificationSlider.value);
+smallThreshold.addEventListener('input', ()=> smallValue.textContent = smallThreshold.value);
+
+/* Drag & drop */
+uploadArea.addEventListener('click', ()=> fileInput.click());
+uploadArea.addEventListener('dragover', (e)=>{ e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', ()=> uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', (e)=>{ e.preventDefault(); uploadArea.classList.remove('dragover'); const f = e.dataTransfer.files[0]; if(f && f.name.endsWith('.svg')) handleFile(f); else showAlert('Por favor selecciona un archivo .svg', 'warn'); });
+
+fileInput.addEventListener('change', (e)=> { const f = e.target.files[0]; if(f) handleFile(f); });
+
+/* handle file */
+async function handleFile(file){
+  addLog(`📁 Cargando ${file.name} ...`, 'info');
+  try{
+    originalSize = file.size;
+    originalSizeEl.textContent = formatBytes(originalSize);
+    fileInfo.style.display='block';
+    fileInfo.textContent = `${file.name} — ${formatBytes(file.size)}`;
+    const text = await file.text();
+    rawSvgText = text;
+    optimizedSvgText = null;
+    removedCount = 0;
+    addLog('✅ Archivo cargado', 'success');
+    showAlert('Archivo cargado. Puedes previsualizar y optimizar.', 'success');
+    optimizeBtn.disabled = false;
+    downloadBtn.disabled = true;
+    extractCoordsBtn.disabled = true;
+    copyCoordsBtn.disabled = true;
+    downloadJsonBtn.disabled = true;
+    renderPreview(text);
+  }catch(err){
+    addLog(`❌ Error al leer archivo: ${err.message}`,'err');
+  }
+}
+
+/* Render preview: parse SVG text and insert into container (clone to avoid stylesheet leaks) */
+function renderPreview(svgText){
+  svgContainer.innerHTML = ''; // wipe
+  // sanitize minimally by using DOMParser
+  try{
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgText, 'image/svg+xml');
+    const svgEl = doc.querySelector('svg');
+    if(!svgEl) { addLog('❌ No se detectó elemento <svg> en el archivo','err'); svgContainer.innerHTML = '<div style="color:#ccc;padding:12px">No es un SVG válido</div>'; return; }
+    // ensure viewBox present for scaling; if missing, compute from width/height
+    if(!svgEl.getAttribute('viewBox')){
+      const w = svgEl.getAttribute('width') || 800;
+      const h = svgEl.getAttribute('height') || 600;
+      svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    }
+    // clone to an element in current document
+    const imported = document.importNode(svgEl, true);
+    // remove width/height to make responsive (but keep viewBox)
+    imported.removeAttribute('width'); imported.removeAttribute('height');
+    // give an id/class for later measurement
+    imported.id = 'previewSVG';
+    // clear container and append
+    svgContainer.appendChild(imported);
+    // reset transforms
+    svgContainer.style.transform = 'translate(0px,0px) scale(1)';
+    curScale = 1; curTranslate = {x:0,y:0};
+    addLog('🖼️ Vista previa generada', 'success');
+  }catch(e){
+    addLog('❌ Error al parsear SVG: '+e.message,'err');
+  }
+}
+
+/* ------------------------------
+   Optimización (manipulación del DOM SVG)
+   ------------------------------ */
+function updateProgressStep(step, total){
+  const pct = Math.round((step/total)*100);
+  showProgress(pct);
+}
+
+/* round numbers in attribute strings to N decimals */
+function roundNumbersInString(str, decimals){
+  if(!str || decimals<0) return str;
+  // regex find numbers (including scientific notation)
+  return str.replace(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi, m => {
+    if(isNaN(Number(m))) return m;
+    return Number(m).toFixed(decimals).replace(/\.?0+$/,'');
+  });
+}
+
+/* main optimize function: returns optimized serialized SVG string and stats */
+async function optimizeSVG(svgText, options){
+  // options: object with booleans and numeric params
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgText, 'image/svg+xml');
+  const svg = doc.querySelector('svg');
+  if(!svg) throw new Error('SVG no válido (no se encontró <svg>)');
+
+  // ensure viewBox as before
+  if(!svg.getAttribute('viewBox')){
+    const w = svg.getAttribute('width') || 800;
+    const h = svg.getAttribute('height') || 600;
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  }
+
+  let steps = 8;
+  let curStep = 0;
+
+  // 1) remove comments
+  if(options.removeComments){
+    const iterator = doc.createTreeWalker(doc, NodeFilter.SHOW_COMMENT, null, false);
+    const toRemove = [];
+    while(iterator.nextNode()) toRemove.push(iterator.currentNode);
+    toRemove.forEach(n => { n.parentNode && n.parentNode.removeChild(n); });
+    removedCount += toRemove.length;
+    curStep++; updateProgressStep(curStep, steps);
+  }
+
+  // 2) remove metadata/desc/title
+  if(options.removeMetadata){
+    ['metadata','desc','title'].forEach(tag=>{
+      const nodes = Array.from(doc.getElementsByTagName(tag));
+      nodes.forEach(n => { n.parentNode && n.parentNode.removeChild(n); });
+      removedCount += nodes.length;
+    });
+    curStep++; updateProgressStep(curStep, steps);
+  }
+
+  // 3) remove elements hidden via style or attributes
+  if(options.removeHidden){
+    const all = Array.from(svg.querySelectorAll('*'));
+    const hidden = [];
+    all.forEach(el=>{
+      const style = (el.getAttribute('style')||'').replace(/\s/g,'');
+      const display = el.getAttribute('display');
+      const visibility = el.getAttribute('visibility');
+      const opacity = el.getAttribute('opacity');
+      // heurística: consider hidden
+      if(display==='none' || visibility==='hidden' || opacity==='0' || /display:none/.test(style) || /visibility:hidden/.test(style) || /opacity:\s*0(?:\.0+)?/.test(style)){
+        hidden.push(el);
+      }
+    });
+    hidden.forEach(n => { n.parentNode && n.parentNode.removeChild(n); });
+    removedCount += hidden.length;
+    curStep++; updateProgressStep(curStep, steps);
+  } else curStep++;
+
+  // 4) remove empty groups <g>
+  if(options.removeEmptyGroups){
+    // repeat until none found (nested empty groups)
+    let removed = 0;
+    do {
+      removed = 0;
+      const groups = Array.from(svg.querySelectorAll('g'));
+      groups.forEach(g=>{
+        const children = Array.from(g.children).filter(c => !(c.tagName && c.tagName.toLowerCase()==='title'));
+        if(children.length===0 && !g.hasAttributes()){
+          g.parentNode && g.parentNode.removeChild(g);
+          removed++;
+        } else if(children.length===0){
+          // also remove if only id/class attributes but no graphic content
+          const nonIdAttrs = Array.from(g.attributes).filter(a=>!['id','class'].includes(a.name));
+          if(nonIdAttrs.length===0){
+            g.parentNode && g.parentNode.removeChild(g);
+            removed++;
+          }
+        }
+      });
+      removedCount += removed;
+    } while(removed>0);
+    curStep++; updateProgressStep(curStep, steps);
+  } else curStep++;
+
+  // 5) simplify numeric precision (paths, transforms, coords) by regex
+  if(options.simplifyPaths){
+    const decimals = options.decimals;
+    // attributes that contain numbers
+    const numericAttrs = ['d','points','x','y','cx','cy','r','rx','ry','transform','width','height','x1','y1','x2','y2'];
+    const all = Array.from(svg.querySelectorAll('*'));
+    all.forEach(el=>{
+      Array.from(el.attributes).forEach(attr=>{
+        if(numericAttrs.includes(attr.name) || /-?\d/.test(attr.value)){
+          // round numbers in string
+          const newVal = roundNumbersInString(attr.value, decimals);
+          if(newVal !== attr.value) el.setAttribute(attr.name, newVal);
+        }
+      });
+      // also inline style numeric rounding
+      if(el.hasAttribute('style')){
+        const s = el.getAttribute('style');
+        el.setAttribute('style', roundNumbersInString(s, decimals));
+      }
+    });
+    curStep++; updateProgressStep(curStep, steps);
+  } else curStep++;
+
+  // 6) remove small elements (measure by getBBox) - to do this we need to append clone to hiddenMeasure
+  if(options.removeSmallElements){
+    // prepare hidden SVG container
+    hiddenMeasure.innerHTML = '';
+    const tmpSvg = doc.importNode(svg, true);
+    tmpSvg.setAttribute('width','800'); tmpSvg.setAttribute('height','600');
+    hiddenMeasure.appendChild(tmpSvg);
+
+    // now measure each candidate shape
+    const candidates = Array.from(tmpSvg.querySelectorAll('path,rect,circle,ellipse,line,polyline,polygon'));
+    const toRemove = [];
+    candidates.forEach((el,i)=>{
+      try{
+        const bbox = el.getBBox();
+        const area = Math.max(0,bbox.width*bbox.height);
+        if(area <= options.smallThreshold){ // in px^2
+          // remove from original svg (match by xpath-ish: try id, else remove corresponding by index)
+          // prefer to use id attribute
+          const id = el.getAttribute('id');
+          if(id){
+            const orig = svg.querySelector('#'+CSS.escape(id));
+            if(orig) toRemove.push(orig);
+          } else {
+            // fallback: match by serialized outerHTML (may remove duplicates)
+            const ser = el.outerHTML;
+            const found = Array.from(svg.querySelectorAll(el.tagName)).find(e => e.outerHTML.replace(/\s+/g,' ')===ser.replace(/\s+/g,' '));
+            if(found) toRemove.push(found);
+          }
+        }
+      }catch(e){}
+    });
+    // remove collected
+    toRemove.forEach(n => { n.parentNode && n.parentNode.removeChild(n); });
+    removedCount += toRemove.length;
+    hiddenMeasure.innerHTML = '';
+    curStep++; updateProgressStep(curStep, steps);
+  } else curStep++;
+
+  // 7) remove duplicate elements (naive: identical outerHTML)
+  if(options.removeDuplicates){
+    const seen = new Set();
+    const allEls = Array.from(svg.querySelectorAll('*'));
+    let dupCount = 0;
+    allEls.forEach(el=>{
+      // skip defs children? still okay
+      // normalize string: remove whitespace runs
+      const s = el.outerHTML.replace(/\s+/g,' ');
+      if(seen.has(s)){
+        el.parentNode && el.parentNode.removeChild(el);
+        dupCount++;
+      } else seen.add(s);
+    });
+    removedCount += dupCount;
+    curStep++; updateProgressStep(curStep, steps);
+  } else curStep++;
+
+  // 8) remove unused defs
+  if(options.removeUnusedDefs){
+    const defs = svg.querySelectorAll('defs');
+    let removedDefs = 0;
+    defs.forEach(def=>{
+      const ids = Array.from(def.querySelectorAll('[id]')).map(n=>n.id);
+      // find references in whole svg: url(#id) or #id in 'xlink:href' or 'href'
+      ids.forEach(id=>{
+        const refRegex = new RegExp(`url\\(#${CSS.escape(id)}\\)|#${CSS.escape(id)}\\b`);
+        const used = svg.outerHTML.match(refRegex);
+        if(!used){
+          const el = def.querySelector('#'+CSS.escape(id));
+          if(el){ el.parentNode.removeChild(el); removedDefs++; }
+        }
+      });
+      // if def empty, remove def
+      if(def.children.length===0){
+        def.parentNode && def.parentNode.removeChild(def);
+      }
+    });
+    removedCount += removedDefs;
+    curStep++; updateProgressStep(curStep, steps);
+  } else curStep++;
+
+  // final serialize
+  const serializer = new XMLSerializer();
+  const out = serializer.serializeToString(svg);
+  return { svgString: out, removed: removedCount, optimizedBytes: new Blob([out]).size };
+}
+
+/* ------------------------------
+   Extract coordinates (heurística)
+   ------------------------------ */
+function extractBuildings(svgText){
+  // parse and find shapes likely to be buildings
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgText, 'image/svg+xml');
+  const svg = doc.querySelector('svg');
+  if(!svg) return [];
+  // candidates: path, polygon, rect, circle, ellipse, polyline
+  const nodes = Array.from(svg.querySelectorAll('path,polygon,rect,circle,ellipse,polyline'));
+  // create hidden measure SVG to get bbox in screen coords
+  hiddenMeasure.innerHTML = '';
+  const tmp = document.importNode(svg, true);
+  tmp.setAttribute('width','800'); tmp.setAttribute('height','600');
+  hiddenMeasure.appendChild(tmp);
+  const results = [];
+  nodes.forEach(n=>{
+    try{
+      const kind = n.tagName.toLowerCase();
+      // try id/class for identification
+      const id = n.getAttribute('id') || null;
+      const classes = (n.getAttribute('class')||'').split(/\s+/).filter(Boolean);
+      const bbox = n.getBBox(); // may throw if not rendered sometimes
+      const cx = bbox.x + bbox.width/2;
+      const cy = bbox.y + bbox.height/2;
+      // minimal heuristic to consider building: area reasonably big (not a dot)
+      const area = Math.abs(bbox.width*bbox.height);
+      results.push({
+        id: id || null,
+        classes,
+        type: kind,
+        bbox: { x: +bbox.x.toFixed(2), y: +bbox.y.toFixed(2), width: +bbox.width.toFixed(2), height: +bbox.height.toFixed(2) },
+        centroid: { x: +cx.toFixed(2), y: +cy.toFixed(2) },
+        raw: n.outerHTML
+      });
+    }catch(e){}
+  });
+  hiddenMeasure.innerHTML = '';
+  return results;
+}
+
+/* ------------------------------
+   UI action: optimize clicked
+   ------------------------------ */
+optimizeBtn.addEventListener('click', async ()=>{
+  if(!rawSvgText) return;
+  addLog('🚀 Iniciando optimización...', 'info');
+  optimizeBtn.disabled = true;
+  showProgress(5);
+  const options = {
+    removeComments: checkRemoveComments.checked,
+    removeMetadata: checkRemoveMetadata.checked,
+    removeHidden: checkRemoveHidden.checked,
+    removeEmptyGroups: checkRemoveEmptyGroups.checked,
+    simplifyPaths: checkSimplifyPaths.checked,
+    decimals: parseInt(decimalSlider.value,10),
+    removeSmallElements: checkRemoveSmallElements.checked,
+    smallThreshold: Math.max(0, parseFloat(smallThreshold.value))*parseFloat(smallThreshold.value), // area approx px^2 (threshold^2)
+    removeDuplicates: checkRemoveDuplicates.checked,
+    removeUnusedDefs: checkRemoveUnusedDefs.checked,
+    removeDefaultStyles: checkRemoveDefaultStyles.checked
+  };
+
+  try{
+    const res = await optimizeSVG(rawSvgText, options);
+    optimizedSvgText = res.svgString;
+    optimizedSizeEl.textContent = formatBytes(res.optimizedBytes);
+    const saved = originalSize - res.optimizedBytes;
+    const pct = originalSize>0? Math.round((saved/originalSize)*100) : 0;
+    reductionEl.textContent = pct + '%';
+    elementsRemovedEl.textContent = res.removed;
+    addLog(`✅ Optimización completada. ${res.removed} elementos removidos.`, 'success');
+    downloadBtn.disabled = false;
+    extractCoordsBtn.disabled = false;
+    showProgress(100);
+    // show optimized preview (we render optimizedSvgText)
+    renderPreview(optimizedSvgText);
+  }catch(err){
+    addLog('❌ Error en optimización: '+err.message,'err');
+  } finally {
+    optimizeBtn.disabled = false;
+  }
+});
+
+/* Download optimized svg */
+downloadBtn.addEventListener('click', ()=>{
+  const text = optimizedSvgText || rawSvgText;
+  if(!text) return;
+  const blob = new Blob([text], {type:'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'optimizado.svg';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  addLog('💾 SVG optimizado descargado', 'info');
+});
+
+/* Extract coordinates -> fill coordOutput, enable copy/download */
+extractCoordsBtn.addEventListener('click', ()=>{
+  const text = optimizedSvgText || rawSvgText;
+  if(!text) return;
+  addLog('📍 Extrayendo coordenadas...', 'info');
+  const list = extractBuildings(text);
+  // basic filtering: drop tiny bboxes
+  const filtered = list.filter(it => it.bbox.width*it.bbox.height > 0.5); // small tolerance
+  const json = JSON.stringify(filtered, null, 2);
+  coordOutput.textContent = json;
+  copyCoordsBtn.disabled = false;
+  downloadJsonBtn.disabled = false;
+  addLog(`✅ Coordenadas extraídas: ${filtered.length} elementos`, 'success');
+});
+
+/* copy JSON */
+copyCoordsBtn.addEventListener('click', async ()=>{
+  const text = coordOutput.textContent;
+  if(!text) return;
+  try{
+    await navigator.clipboard.writeText(text);
+    addLog('📋 JSON copiado al portapapeles', 'success');
+  }catch(e){
+    addLog('❌ No se pudo copiar al portapapeles', 'err');
+  }
+});
+
+/* download JSON */
+downloadJsonBtn.addEventListener('click', ()=>{
+  const text = coordOutput.textContent;
+  if(!text) return;
+  const blob = new Blob([text], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'edificios.json'; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  addLog('⬇ JSON descargado', 'info');
+});
+
+/* reset */
+resetBtn.addEventListener('click', ()=>{
+  rawSvgText = null; optimizedSvgText = null; originalSize = 0; removedCount = 0;
+  fileInfo.style.display='none'; fileInfo.textContent='';
+  originalSizeEl.textContent = '-'; optimizedSizeEl.textContent='-'; reductionEl.textContent='-'; elementsRemovedEl.textContent='-';
+  svgContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;color:var(--muted)"><div style="font-size:26px">🗺️</div><div>El mapa aparecerá aquí al cargar un SVG</div></div>';
+  optimizeBtn.disabled = true; downloadBtn.disabled = true; extractCoordsBtn.disabled = true; copyCoordsBtn.disabled = true; downloadJsonBtn.disabled = true;
+  coordOutput.textContent = '';
+  addLog('♻️ Sistema reiniciado', 'info');
+});
+
+/* ------------------------------
+   Zoom & Pan for svgContainer
+   ------------------------------ */
+let curScale = 1;
+let curTranslate = {x:0,y:0};
+let isPanning = false;
+let startPan = {x:0,y:0};
+
+function applyTransform(){
+  svgContainer.style.transform = `translate(${curTranslate.x}px, ${curTranslate.y}px) scale(${curScale})`;
+}
+
+qs('#zoomIn').addEventListener('click', ()=>{ curScale = Math.min(10, curScale*1.2); applyTransform(); });
+qs('#zoomOut').addEventListener('click', ()=>{ curScale = Math.max(0.1, curScale/1.2); applyTransform(); });
+qs('#zoomReset').addEventListener('click', ()=>{ curScale=1; curTranslate={x:0,y:0}; applyTransform(); });
+
+svgContainer.addEventListener('mousedown', (e)=>{ isPanning = true; startPan={x:e.clientX - curTranslate.x, y:e.clientY - curTranslate.y}; svgContainer.style.cursor='grabbing'; });
+window.addEventListener('mousemove', (e)=>{ if(!isPanning) return; curTranslate.x = e.clientX - startPan.x; curTranslate.y = e.clientY - startPan.y; applyTransform(); });
+window.addEventListener('mouseup', ()=>{ isPanning = false; svgContainer.style.cursor='grab'; });
+
+svgContainer.addEventListener('wheel', (e)=>{ e.preventDefault(); const delta = e.deltaY>0 ? 0.9 : 1.1; const prevScale = curScale; curScale = Math.max(0.1, Math.min(10, curScale*delta)); // zoom to pointer is more complex, keep center simple
+  applyTransform();
+}, {passive:false});
+
+/* ------------------------------
+   Aux tools
+   ------------------------------ */
+qs('#toggleHiddenEls').addEventListener('click', ()=>{
+  // find elements with display:none or opacity:0 and highlight them temporarily
+  if(!rawSvgText && !optimizedSvgText){ showAlert('Carga un SVG primero','warn'); return; }
+  const text = optimizedSvgText || rawSvgText;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'image/svg+xml');
+  const svg = doc.querySelector('svg');
+  const hidden = [];
+  Array.from(svg.querySelectorAll('*')).forEach(el=>{
+    const s = (el.getAttribute('style')||'') + ' ' + (el.getAttribute('display')||'') + ' ' + (el.getAttribute('visibility')||'') + ' ' + (el.getAttribute('opacity')||'');
+    if(/display:\s*none|visibility:\s*hidden|opacity:\s*0/.test(s)) hidden.push(el.tagName + (el.id?('#'+el.id):'') );
+  });
+  auxInfo.textContent = `Elementos ocultos detectados: ${hidden.length} — ${hidden.slice(0,6).join(', ')}${hidden.length>6?' ...':''}`;
+  addLog(`🔍 ${hidden.length} elementos ocultos detectados (ver info)`, 'info');
+});
+
+qs('#toggleDefsList').addEventListener('click', ()=>{
+  if(!rawSvgText && !optimizedSvgText){ showAlert('Carga un SVG primero','warn'); return; }
+  const text = optimizedSvgText || rawSvgText;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'image/svg+xml');
+  const defs = Array.from(doc.querySelectorAll('defs *[id]')).map(n=>n.id);
+  auxInfo.textContent = `Defs con id: ${defs.length>0? defs.join(', '): '— ninguno —'}`;
+  addLog(`📚 Defs detectadas: ${defs.length}`, 'info');
+});
+
+/* initial preview placeholder */
+svgContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;color:var(--muted)"><div style="font-size:26px">🗺️</div><div>El mapa aparecerá aquí al cargar un SVG</div></div>';
+
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+// ============================================
+// DATOS CALIBRADOS DEL MAPA
+// ============================================
+
+const EDIFICIOS = {
+    Entrada Adolfo RC: { nombre: "Entrada Adolfo RC", x: 491, y: 241 },
+    Edificio F: { nombre: "Edificio F", x: 450, y: 422 }
+};
+
+const WAYPOINTS = {
+    Punto 1: { x: 470, y: 276 },
+    Punto 2: { x: 449, y: 307 },
+    Punto 3: { x: 432, y: 337 },
+    Punto 4: { x: 416, y: 368 },
+    Punto 5: { x: 396, y: 399 }
+};
+
+// Orden de puntos para copiar en RUTAS:
+// Entrada Adolfo RC → Punto 1 → Punto 2 → Punto 3 → Punto 4 → Punto 5 → Edificio F

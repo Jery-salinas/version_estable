@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Mapa Campus Ingeniería UV</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --uv-green: #007849;
+            --uv-blue: #003C71;
+            --bg: #F9FAFB;
+            --text: #1E1E1E;
+            --shadow: rgba(3, 60, 113, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Poppins', system-ui, Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .app-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(90deg, var(--uv-blue), #04263f);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .app-title {
+            font-weight: 600;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        /* Main container */
+        .app-main {
+            padding-top: 60px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .map-container {
+            flex: 1;
+            width: 100%;
+            background: #fff;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* SVG Styling */
+        #main-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: grab;
+        }
+
+        #main-svg:active {
+            cursor: grabbing;
+        }
+
+        /* Capas SVG */
+        #layer-dwg path,
+        #layer-dwg polyline,
+        #layer-dwg line,
+        #layer-dwg rect {
+            stroke: #666;
+            fill: none;
+            stroke-width: 0.5px;
+            vector-effect: non-scaling-stroke;
+        }
+
+        #layer-dwg text {
+            fill: #999;
+            font-size: 10px;
+        }
+
+        .layer-hidden {
+            display: none !important;
+        }
+
+        /* Nodos */
+        #layer-nodes .node {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #layer-nodes circle.node {
+            fill: var(--uv-green);
+            stroke: white;
+            stroke-width: 2px;
+        }
+
+        #layer-nodes .node:hover {
+            fill: var(--uv-blue);
+            transform: scale(1.2);
+        }
+
+        #layer-nodes .selected-start {
+            fill: #ff6b6b;
+            stroke: white;
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.6));
+        }
+
+        #layer-nodes .selected-end {
+            fill: #4ecdc4;
+            stroke: white;
+            stroke-width: 3px;
+            filter: drop-shadow(0 0 8px rgba(78, 205, 196, 0.6));
+        }
+
+        /* Rutas */
+        #layer-route .route-path {
+            stroke: var(--uv-green);
+            stroke-width: 4px;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 12 6;
+            animation: dash 30s linear infinite;
+            filter: drop-shadow(0 0 6px rgba(0, 120, 73, 0.4));
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+
+        /* Controles superiores flotantes */
+        .controls-top {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 50;
+        }
+
+        .btn {
+            background: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            min-width: 48px;
+            min-height: 48px;
+            box-shadow: 0 4px 12px var(--shadow);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 120, 73, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.primary {
+            background: var(--uv-green);
+            color: white;
+        }
+
+        .btn.secondary {
+            background: var(--uv-blue);
+            color: white;
+        }
+
+        /* Panel inferior */
+        .bottom-panel {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px var(--shadow);
+            z-index: 60;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .panel-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--uv-blue);
+            margin: 0 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .select-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .select-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .select-group label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--uv-green);
+            box-shadow: 0 0 0 3px rgba(0, 120, 73, 0.1);
+        }
+
+        .btn.large {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        /* Loader */
+        #map-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 90;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #e0e0e0;
+            border-top: 6px solid var(--uv-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loader-text {
+            margin-top: 20px;
+            color: var(--uv-blue);
+            font-weight: 600;
+        }
+
+        /* Info badge */
+        .info-badge {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px var(--shadow);
+            font-size: 13px;
+            color: #666;
+            z-index: 50;
+            display: none;
+        }
+
+        .info-badge.show {
+            display: block;
+        }
+
+        .info-badge strong {
+            color: var(--uv-blue);
+        }
+
+        /* Responsive */
+        @media (min-width: 768px) {
+            .bottom-panel {
+                left: 20%;
+                right: 20%;
+            }
+
+            .select-row {
+                max-width: 600px;
+                margin: 0 auto 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .app-title {
+                font-size: 15px;
+            }
+
+            .header-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .select-row {
+                grid-template-columns: 1fr;
+            }
+
+            .controls-top {
+                right: 12px;
+                top: 12px;
+            }
+
+            .btn {
+                min-width: 44px;
+                min-height: 44px;
+                font-size: 18px;
+            }
+        }
+
+        /* Utilidades */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="app-title">
+            <span>🗺️</span>
+            <span>Mapa Campus Ingeniería UV</span>
+        </div>
+        <div class="header-actions">
+            <button id="btn-toggle-dwg-top" class="header-btn" title="Mostrar/Ocultar capa DWG">
+                🏗️ Capa DWG
+            </button>
+            <button id="btn-detect-nodes" class="header-btn" title="Detectar nodos automáticamente">
+                🔍 Detectar Nodos
+            </button>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="app-main">
+        <div id="map-container" class="map-container" aria-label="Mapa interactivo del campus">
+            <!-- SVG Base -->
+            <svg
+                id="main-svg"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 2000 1200"
+                preserveAspectRatio="xMidYMid meet"
+                role="img"
+                aria-label="Mapa del campus universitario"
+            >
+                <defs>
+                    <!-- Gradientes y filtros opcionales -->
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                
+                <!-- Capas: DWG, Nodos, Rutas -->
+                <g id="layer-dwg" data-layer="dwg"></g>
+                <g id="layer-nodes" data-layer="nodes"></g>
+                <g id="layer-route" data-layer="route"></g>
+            </svg>
+
+            <!-- Loader -->
+            <div id="map-loader" aria-hidden="false" role="status">
+                <div class="spinner"></div>
+                <div class="loader-text">Cargando mapa...</div>
+            </div>
+
+            <!-- Info Badge -->
+            <div id="info-badge" class="info-badge">
+                <strong>Tip:</strong> Arrastra para mover, scroll/pellizco para zoom
+            </div>
+
+            <!-- Controles flotantes -->
+            <div class="controls-top">
+                <button id="bottom-zoom-in" class="btn primary" title="Acercar" aria-label="Acercar zoom">
+                    ➕
+                </button>
+                <button id="bottom-center" class="btn secondary" title="Centrar vista" aria-label="Centrar vista">
+                    🎯
+                </button>
+                <button id="bottom-zoom-out" class="btn primary" title="Alejar" aria-label="Alejar zoom">
+                    ➖
+                </button>
+                <button id="bottom-toggle-dwg" class="btn" title="Mostrar/Ocultar capa DWG" aria-label="Alternar capa DWG">
+                    🏗️
+                </button>
+                <button id="debug-visual" class="btn" title="DEBUG: Ver vectores DWG" aria-label="Modo debug" style="display:none;">
+                    🐛
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel de control inferior -->
+        <div class="bottom-panel">
+            <h3 class="panel-title">
+                🚀 Planifica tu ruta
+            </h3>
+            
+            <div class="select-row">
+                <div class="select-group">
+                    <label for="select-start">📍 Punto de Inicio</label>
+                    <select id="select-start" aria-label="Seleccionar punto de inicio">
+                        <option value="">Selecciona en el mapa...</option>
+                    </select>
+                </div>
+                
+                <div class="select-group">
+                    <label for="select-end">🎯 Punto de Destino</label>
+                    <select id="select-end" aria-label="Seleccionar punto de destino">
+                        <option value="">Selecciona en el mapa...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="bottom-route" class="btn primary large">
+                    🗺️ Generar Ruta
+                </button>
+                <button id="btn-clear-route" class="btn large" style="background: #e94560; color: white;">
+                    🗑️ Limpiar
+                </button>
+            </div>
+
+            <button id="btn-add-nodes" class="btn large" style="background: var(--uv-blue); color: white; margin-top: 8px;">
+                ➕ Importar Nodos
+            </button>
+        </div>
+    </main>
+
+    <!-- Scripts modulares -->
+    <script type="module">
+        // === map.js incrustado ===
+        const SVG_NS = 'http://www.w3.org/2000/svg'
+
+        let svgEl = null
+        let containerEl = null
+        let graph = null
+        let selected = { start: null, end: null }
+        let state = { scale: 1, tx: 0, ty: 0 }
+        let interactive = { dragging:false, lastX:0, lastY:0 }
+
+        async function initMap(options = {}) {
+            containerEl = document.getElementById('map-container')
+            svgEl = document.getElementById('main-svg')
+            showLoader(true)
+
+            // Mostrar tip
+            const tipBadge = document.getElementById('info-badge')
+            if (tipBadge) {
+                tipBadge.classList.add('show')
+                setTimeout(() => tipBadge.classList.remove('show'), 5000)
+            }
+
+            try {
+                const res = await fetch('./assets/graph.json')
+                if (res.ok) graph = await res.json()
+            } catch (err) {
+                console.warn('graph.json no disponible', err)
+                graph = null
+            }
+
+            await Promise.all([
+                loadSVGLayer('./assets/PLANO_OPTIMIZADO.svg', 'layer-dwg').catch(()=>{}),
+                loadSVGLayer('./assets/PLANO_OPTIMIZADO.svg', 'layer-nodes').catch(()=>{})
+            ])
+
+            ensureWrapper()
+            enablePanZoom()
+            indexNodes()
+            enableNodeClicks()
+            showLoader(false)
+        }
+
+        async function loadSVGLayer(url, groupId) {
+            const group = document.getElementById(groupId)
+            if (!group) throw new Error('Grupo no encontrado: ' + groupId)
+            const res = await fetch(url)
+            if (!res.ok) throw new Error('HTTP ' + res.status)
+            const text = await res.text()
+            
+            while (group.firstChild) group.removeChild(group.firstChild)
+
+            const parser = new DOMParser()
+            const doc = parser.parseFromString(text, 'image/svg+xml')
+            const imported = doc.documentElement
+
+            const mainViewBox = svgEl.getAttribute('viewBox') || null
+            let mainW = svgEl.clientWidth || 2000, mainH = svgEl.clientHeight || 1200
+            if (mainViewBox) {
+                const mv = mainViewBox.split(/\s+/).map(Number)
+                if (mv.length === 4) { mainW = mv[2]; mainH = mv[3] }
+            }
+
+            let importedW = null, importedH = null
+            const vb = imported.getAttribute('viewBox')
+            if (vb) {
+                const parts = vb.split(/\s+/).map(Number)
+                if (parts.length === 4) { importedW = parts[2]; importedH = parts[3] }
+            }
+            if (!importedW || !importedH) { importedW = 800; importedH = 600 }
+
+            const scale = Math.min(mainW / importedW, mainH / importedH)
+            const tx = (mainW - importedW * scale) / 2
+            const ty = (mainH - importedH * scale) / 2
+
+            const wrap = document.createElementNS(SVG_NS, 'g')
+            wrap.setAttribute('class', 'imported-wrap')
+            wrap.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`)
+
+            Array.from(imported.childNodes).forEach(n => { 
+                if (n.nodeType === 1) wrap.appendChild(document.importNode(n, true)) 
+            })
+            group.appendChild(wrap)
+        }
+
+        let rafPending = false
+        function scheduleApplyTransform() {
+            if (rafPending) return
+            rafPending = true
+            requestAnimationFrame(() => { rafPending = false; applyTransform() })
+        }
+
+        function ensureWrapper() {
+            if (!svgEl) return
+            let wrapper = svgEl.querySelector('#__view__')
+            if (!wrapper) {
+                wrapper = document.createElementNS(SVG_NS, 'g')
+                wrapper.setAttribute('id', '__view__')
+                const children = Array.from(svgEl.childNodes)
+                children.forEach(ch => { if (ch.nodeType === 1 && ch.id !== '__view__') wrapper.appendChild(ch) })
+                svgEl.appendChild(wrapper)
+            }
+            applyTransform()
+        }
+
+        function applyTransform() {
+            const wrapper = svgEl.querySelector('#__view__')
+            if (!wrapper) return
+            wrapper.setAttribute('transform', `translate(${state.tx},${state.ty}) scale(${state.scale})`)
+        }
+
+        function enablePanZoom() {
+            if (!containerEl) return
+            
+            containerEl.addEventListener('pointerdown', (e) => {
+                interactive.dragging = true
+                interactive.lastX = e.clientX
+                interactive.lastY = e.clientY
+                containerEl.setPointerCapture?.(e.pointerId)
+            })
+            
+            containerEl.addEventListener('pointermove', (e) => {
+                if (!interactive.dragging) return
+                const dx = e.clientX - interactive.lastX
+                const dy = e.clientY - interactive.lastY
+                interactive.lastX = e.clientX
+                interactive.lastY = e.clientY
+                state.tx += dx
+                state.ty += dy
+                scheduleApplyTransform()
+            })
+            
+            containerEl.addEventListener('pointerup', (e) => {
+                interactive.dragging = false
+                try { containerEl.releasePointerCapture?.(e.pointerId) } catch(_) {}
+            })
+            
+            containerEl.addEventListener('pointercancel', ()=> interactive.dragging = false)
+
+            containerEl.addEventListener('wheel', (e) => {
+                e.preventDefault()
+                const factor = e.deltaY < 0 ? 1.12 : 0.9
+                zoom(factor)
+            }, { passive:false })
+
+            let pinch = { active:false, startDist:0, startScale:1 }
+            containerEl.addEventListener('touchstart', (e) => {
+                if (e.touches && e.touches.length === 2) {
+                    pinch.active = true
+                    pinch.startDist = distTouches(e.touches)
+                    pinch.startScale = state.scale
+                }
+            }, { passive:false })
+            
+            containerEl.addEventListener('touchmove', (e) => {
+                if (pinch.active && e.touches.length === 2) {
+                    e.preventDefault()
+                    const d = distTouches(e.touches)
+                    const f = d / pinch.startDist
+                    state.scale = clamp(pinch.startScale * f, 0.2, 6)
+                    scheduleApplyTransform()
+                }
+            }, { passive:false })
+            
+            containerEl.addEventListener('touchend', () => { pinch.active = false }, { passive:true })
+        }
+
+        function distTouches(touches) {
+            const [a,b] = touches
+            return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+        }
+
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)) }
+
+        function zoom(factor) {
+            state.scale = clamp(state.scale * factor, 0.2, 6)
+            scheduleApplyTransform()
+        }
+
+        function resetView() {
+            state.scale = 1
+            state.tx = 0
+            state.ty = 0
+            applyTransform()
+        }
+
+        function indexNodes() {
+            const nodes = svgEl.querySelectorAll('#layer-nodes [data-node-id]')
+            nodes.forEach(n => n.classList.add('node'))
+        }
+
+        function enableNodeClicks() {
+            const nodes = svgEl.querySelectorAll('#layer-nodes [data-node-id]')
+            nodes.forEach(n => {
+                n.removeEventListener('click', onNodeClick)
+                n.addEventListener('click', onNodeClick)
+            })
+        }
+
+        function onNodeClick(e) {
+            e.stopPropagation()
+            const el = e.currentTarget
+            const id = el.getAttribute('data-node-id')
+            if (!id) return
+            handleNodeSelect(id)
+        }
+
+        function handleNodeSelect(id) {
+            if (!selected.start) {
+                clearSelection(false)
+                selected.start = id
+                markNode(id, 'selected-start')
+                dispatchSelectionChange()
+                return
+            }
+            
+            if (selected.start && !selected.end && selected.start !== id) {
+                selected.end = id
+                markNode(id, 'selected-end')
+                dispatchSelectionChange()
+                computeAndDrawRoute(selected.start, selected.end)
+                return
+            }
+            
+            clearSelection(false)
+            selected.start = id
+            markNode(id, 'selected-start')
+            dispatchSelectionChange()
+        }
+
+        function markNode(id, cls) {
+            const el = getNodeById(id)
+            if (!el) return
+            el.classList.add(cls)
+        }
+
+        function getNodeById(id) {
+            return svgEl.querySelector(`#layer-nodes [data-node-id="${id}"]`)
+        }
+
+        function clearSelection(notify = true) {
+            svgEl.querySelectorAll('#layer-nodes .selected-start, #layer-nodes .selected-end')
+                .forEach(el => el.classList.remove('selected-start','selected-end'))
+            selected.start = null
+            selected.end = null
+            
+            const routeGroup = svgEl.querySelector('#layer-route')
+            if (routeGroup) while (routeGroup.firstChild) routeGroup.removeChild(routeGroup.firstChild)
+            if (notify) dispatchSelectionChange()
+        }
+
+        function computeAndDrawRoute(startId, endId) {
+            if (!startId || !endId) return
+            if (!graph) { drawStraight(startId, endId); return }
+            const path = dijkstra(graph, startId, endId)
+            if (!path || path.length === 0) { drawStraight(startId, endId); return }
+            drawPathNodes(path)
+        }
+
+        function drawStraight(a,b) {
+            const sa = getNodeById(a), sb = getNodeById(b)
+            if (!sa || !sb) return
+            const [x1,y1] = coords(sa), [x2,y2] = coords(sb)
+            const routeGroup = svgEl.querySelector('#layer-route')
+            while (routeGroup.firstChild) routeGroup.removeChild(routeGroup.firstChild)
+            const path = document.createElementNS(SVG_NS,'path')
+            path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`)
+            path.classList.add('route-path')
+            routeGroup.appendChild(path)
+        }
+
+        function drawPathNodes(path) {
+            const routeGroup = svgEl.querySelector('#layer-route')
+            while (routeGroup.firstChild) routeGroup.removeChild(routeGroup.firstChild)
+            const points = path.map(id => {
+                const el = getNodeById(id)
+                const [x,y] = coords(el)
+                return `${x},${y}`
+            }).join(' ')
+            const poly = document.createElementNS(SVG_NS,'polyline')
+            poly.setAttribute('points', points)
+            poly.classList.add('route-path')
+            routeGroup.appendChild(poly)
+        }
+
+        function coords(el) {
+            if (!el) return [0,0]
+            if (el.hasAttribute('cx') && el.hasAttribute('cy')) 
+                return [parseFloat(el.getAttribute('cx')), parseFloat(el.getAttribute('cy'))]
+            const bbox = el.getBBox()
+            return [bbox.x + bbox.width/2, bbox.y + bbox.height/2]
+        }
+
+        function dijkstra(graphObj, start, goal) {
+            try {
+                const dist = {}, prev = {}, Q = new Set()
+                Object.keys(graphObj.nodes).forEach(n => { dist[n]=Infinity; prev[n]=null; Q.add(n) })
+                if (!(start in graphObj.nodes) || !(goal in graphObj.nodes)) return null
+                dist[start]=0
+                
+                while (Q.size) {
+                    let u=null, best=Infinity
+                    Q.forEach(v => { if (dist[v] < best){ best = dist[v]; u=v } })
+                    if (u === null) break
+                    Q.delete(u)
+                    if (u === goal) break
+                    const neighbors = graphObj.edges[u] || []
+                    neighbors.forEach(nb => {
+                        const v = nb.to, alt = dist[u] + (nb.weight || 1)
+                        if (alt < dist[v]){ dist[v]=alt; prev[v]=u }
+                    })
+                }
+                
+                const path = []
+                let u = goal
+                if (prev[u] !== null || u === start) {
+                    while (u) { path.unshift(u); u = prev[u] }
+                    return path
+                }
+                return null
+            } catch (err) {
+                console.warn('Dijkstra error', err)
+                return null
+            }
+        }
+
+        function autoAttachNodes() {
+            const group = svgEl.querySelector('#layer-nodes')
+            if (!group) return
+            const candidates = group.querySelectorAll('circle, ellipse, rect, path')
+            let counter = 1
+            
+            candidates.forEach(el => {
+                if (el.hasAttribute('data-node-id')) return
+                try {
+                    const bbox = el.getBBox()
+                    if (bbox.width * bbox.height > 20000) return
+                } catch(_) {}
+                const id = `N${Date.now().toString().slice(-4)}${counter++}`
+                el.setAttribute('data-node-id', id)
+                el.setAttribute('data-node-name', el.getAttribute('id') || id)
+                el.classList.add('node')
+            })
+            
+            indexNodes()
+            enableNodeClicks()
+            dispatchNodesIndexed()
+        }
+
+        function importNodes(list = []) {
+            const group = svgEl.querySelector('#layer-nodes')
+            if (!group) return
+            list.forEach(n => {
+                const c = document.createElementNS(SVG_NS, 'circle')
+                c.setAttribute('cx', String(n.x))
+                c.setAttribute('cy', String(n.y))
+                c.setAttribute('r', '16')
+                c.setAttribute('data-node-id', n.id)
+                c.setAttribute('data-node-name', n.name)
+                c.classList.add('node')
+                group.appendChild(c)
+            })
+            indexNodes()
+            enableNodeClicks()
+            dispatchNodesIndexed()
+        }
+
+        function toggleLayer(layerId) {
+            const el = document.getElementById(layerId)
+            if (!el) return
+            el.classList.toggle('layer-hidden')
+        }
+
+        function showLoader(yes = true) {
+            const el = document.getElementById('map-loader')
+            if (!el) return
+            el.style.display = yes ? 'flex' : 'none'
+            el.setAttribute('aria-hidden', yes ? 'false' : 'true')
+        }
+
+        function debugShowVectors() {
+            const g = svgEl && svgEl.querySelector ? svgEl.querySelector('#layer-dwg') : null
+            if (!g) { alert('Capa DWG no encontrada'); return }
+            Array.from(g.querySelectorAll('*')).forEach(el => {
+                try {
+                    el.style.stroke = '#333'
+                    el.style.fill = 'none'
+                    el.style.strokeWidth = '1px'
+                } catch(_) {}
+            })
+        }
+
+        function dispatchSelectionChange() {
+            const evt = new CustomEvent('map:selection', { 
+                detail: { start: selected.start, end: selected.end } 
+            })
+            window.dispatchEvent(evt)
+        }
+
+        function dispatchNodesIndexed() {
+            const evt = new CustomEvent('map:nodesIndexed')
+            window.dispatchEvent(evt)
+        }
+
+        // Exportar funciones
+        const MapMod = {
+            initMap,
+            loadSVGLayer,
+            toggleLayer,
+            zoom,
+            resetView,
+            drawRouteBetween: computeAndDrawRoute,
+            clearSelection,
+            importNodes,
+            autoAttachNodes,
+            debugShowVectors,
+            showLoader
+        }
+
+        // === ui.js incrustado ===
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await MapMod.initMap()
+            } catch (err) {
+                console.error('Error inicializando mapa', err)
+                alert('Error al cargar el mapa. Por favor recarga la página.')
+            }
+
+            // Referencias a botones
+            const q = sel => document.getElementById(sel)
+            const bZoomIn = q('bottom-zoom-in')
+            const bZoomOut = q('bottom-zoom-out')
+            const bCenter = q('bottom-center')
+            const bToggle = q('bottom-toggle-dwg')
+            const bRoute = q('bottom-route')
+            const bClear = q('btn-clear-route')
+            const topToggle = q('btn-toggle-dwg-top')
+            const detectNodes = q('btn-detect-nodes')
+            const debugBtn = q('debug-visual')
+            const btnAddNodes = q('btn-add-nodes')
+
+            // Eventos de controles
+            bZoomIn?.addEventListener('click', () => MapMod.zoom(1.2))
+            bZoomOut?.addEventListener('click', () => MapMod.zoom(0.8))
+            bCenter?.addEventListener('click', () => MapMod.resetView())
+            bToggle?.addEventListener('click', () => MapMod.toggleLayer('layer-dwg'))
+            topToggle?.addEventListener('click', () => MapMod.toggleLayer('layer-dwg'))
+            
+            detectNodes?.addEventListener('click', () => {
+                if (confirm('¿Detectar nodos automáticamente en la capa de nodos?')) {
+                    MapMod.autoAttachNodes()
+                    alert('Nodos detectados. Revisa el mapa y los selectores.')
+                }
+            })
+
+            debugBtn?.addEventListener('click', () => MapMod.debugShowVectors())
+
+            // Botón de generar ruta
+            bRoute?.addEventListener('click', () => {
+                const startSel = q('select-start')
+                const endSel = q('select-end')
+                let start = startSel?.value || null
+                let end = endSel?.value || null
+
+                if (!start || !end) {
+                    const sEl = document.querySelector('#layer-nodes .selected-start')
+                    const eEl = document.querySelector('#layer-nodes .selected-end')
+                    start = start || (sEl ? sEl.getAttribute('data-node-id') : null)
+                    end = end || (eEl ? eEl.getAttribute('data-node-id') : null)
+                }
+
+                if (!start || !end || start === end) {
+                    alert('Selecciona inicio y destino diferentes (usando el mapa o los selectores).')
+                    return
+                }
+
+                MapMod.clearSelection()
+                const sEl = document.querySelector(`#layer-nodes [data-node-id='${start}']`)
+                const eEl = document.querySelector(`#layer-nodes [data-node-id='${end}']`)
+                sEl?.classList.add('selected-start')
+                eEl?.classList.add('selected-end')
+                MapMod.drawRouteBetween(start, end)
+            })
+
+            // Botón limpiar
+            bClear?.addEventListener('click', () => {
+                MapMod.clearSelection(true)
+                const startSel = q('select-start')
+                const endSel = q('select-end')
+                if (startSel) startSel.value = ''
+                if (endSel) endSel.value = ''
+            })
+
+            // Importar nodos
+            btnAddNodes?.addEventListener('click', () => {
+                const useSample = confirm('¿Cargar ejemplo de nodos desde assets?\n\nCancela para seleccionar archivo JSON.')
+                
+                if (useSample) {
+                    fetch('./assets/nodes_sample.json')
+                        .then(r => r.json())
+                        .then(data => {
+                            MapMod.importNodes(data)
+                            alert('Nodos importados correctamente.')
+                        })
+                        .catch(e => alert('Error cargando sample: ' + (e.message || e)))
+                    return
+                }
+
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = '.json,application/json'
+                input.onchange = e => {
+                    const f = e.target.files?.[0]
+                    if (!f) return
+                    const fr = new FileReader()
+                    fr.onload = ev => {
+                        try {
+                            const json = JSON.parse(ev.target.result)
+                            MapMod.importNodes(json)
+                            alert('Nodos importados correctamente.')
+                        } catch(err) {
+                            alert('JSON inválido: ' + err.message)
+                        }
+                    }
+                    fr.readAsText(f)
+                }
+                input.click()
+            })
+
+            // Escuchar eventos de selección desde map.js
+            window.addEventListener('map:selection', (e) => {
+                const { start, end } = e.detail
+                const startSel = document.getElementById('select-start')
+                const endSel = document.getElementById('select-end')
+                if (startSel) startSel.value = start || ''
+                if (endSel) endSel.value = end || ''
+            })
+
+            // Cuando se indexan nodos, actualizar selectores
+            window.addEventListener('map:nodesIndexed', () => {
+                reindexSelects()
+            })
+
+            // Reindex inicial
+            setTimeout(reindexSelects, 500)
+        })
+
+        // Rellenar selectores con nodos disponibles
+        function reindexSelects() {
+            const startSel = document.getElementById('select-start')
+            const endSel = document.getElementById('select-end')
+            if (!startSel || !endSel) return
+
+            const nodes = document.querySelectorAll('#layer-nodes [data-node-id]')
+            
+            // Guardar valores actuales
+            const currentStart = startSel.value
+            const currentEnd = endSel.value
+            
+            startSel.innerHTML = '<option value="">Selecciona en el mapa...</option>'
+            endSel.innerHTML = '<option value="">Selecciona en el mapa...</option>'
+            
+            nodes.forEach(n => {
+                const id = n.getAttribute('data-node-id')
+                const name = n.getAttribute('data-node-name') || id
+                
+                const o1 = document.createElement('option')
+                o1.value = id
+                o1.text = name
+                
+                const o2 = o1.cloneNode(true)
+                
+                startSel.appendChild(o1)
+                endSel.appendChild(o2)
+            })
+            
+            // Restaurar valores si existían
+            if (currentStart) startSel.value = currentStart
+            if (currentEnd) endSel.value = currentEnd
+            
+            console.log(`✅ ${nodes.length} nodos indexados en los selectores`)
+        }
+    </script>
+</body>
+</html>

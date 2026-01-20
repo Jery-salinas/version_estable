@@ -1,0 +1,140 @@
+[
+    {
+        "id": "biblioteca",
+        "nombreEdificio": "Biblioteca",
+        "coordX": 100,
+        "coordY": 100,
+        "salones": [
+            {
+                "nombreSalon": "Sala de Lectura",
+                "capacidad": 50,
+                "recursos": ["mesas", "sillas", "lámparas de lectura"]
+            },
+            {
+                "nombreSalon": "Sala de Computadoras",
+                "capacidad": 30,
+                "recursos": ["computadoras", "impresoras", "acceso a internet"]
+            },
+            {
+                "nombreSalon": "Sala de Estudio Grupal",
+                "capacidad": 20,
+                "recursos": ["mesas grupales", "pizarras", "proyector"]
+            }
+        ]
+    },
+    {
+        "id": "edificioA",
+        "nombreEdificio": "Edificio A",
+        "coordX": 200,
+        "coordY": 150,
+        "salones": [
+            {
+                "nombreSalon": "A-01",
+                "capacidad": 30,
+                "recursos": ["mesas", "sillas", "proyector"]
+            },
+            {
+                "nombreSalon": "A-02",
+                "capacidad": 30,
+                "recursos": ["computadoras", "impresoras", "acceso a internet"]
+            },
+            {
+                "nombreSalon": "A-03",
+                "capacidad": 40,
+                "recursos": ["mesas", "sillas", "pizarra", "proyector"]
+            },
+            {
+                "nombreSalon": "Laboratorio A-Lab1",
+                "capacidad": 25,
+                "recursos": ["equipos de laboratorio", "mesas de trabajo", "seguridad"]
+            }
+        ]
+    },
+    {
+        "id": "edificioB",
+        "nombreEdificio": "Edificio B",
+        "coordX": 300,
+        "coordY": 200,
+        "salones": [
+            {
+                "nombreSalon": "B-101",
+                "capacidad": 35,
+                "recursos": ["mesas", "sillas", "aire acondicionado"]
+            },
+            {
+                "nombreSalon": "B-102",
+                "capacidad": 35,
+                "recursos": ["mesas", "sillas", "proyector", "audio"]
+            },
+            {
+                "nombreSalon": "B-103",
+                "capacidad": 40,
+                "recursos": ["mesas", "sillas", "sistema multimedia"]
+            }
+        ]
+    },
+    {
+        "id": "edificioC",
+        "nombreEdificio": "Edificio C",
+        "coordX": 400,
+        "coordY": 250,
+        "salones": [
+            {
+                "nombreSalon": "C-201",
+                "capacidad": 45,
+                "recursos": ["mesas", "sillas", "proyector", "pizarra digital"]
+            },
+            {
+                "nombreSalon": "C-202",
+                "capacidad": 45,
+                "recursos": ["mesas", "sillas", "aire acondicionado", "proyector"]
+            },
+            {
+                "nombreSalon": "Auditorio C",
+                "capacidad": 100,
+                "recursos": ["butacas", "escenario", "sistema de audio", "proyector", "iluminación"]
+            }
+        ]
+    },
+    {
+        "id": "cafeteria",
+        "nombreEdificio": "Cafetería",
+        "coordX": 250,
+        "coordY": 100,
+        "salones": [
+            {
+                "nombreSalon": "Área de Comidas",
+                "capacidad": 80,
+                "recursos": ["mesas", "sillas", "microondas", "refrigerador"]
+            },
+            {
+                "nombreSalon": "Terraza",
+                "capacidad": 40,
+                "recursos": ["mesas al aire libre", "sombrillas"]
+            }
+        ]
+    },
+    {
+        "id": "centroComputo",
+        "nombreEdificio": "Centro de Cómputo",
+        "coordX": 150,
+        "coordY": 200,
+        "salones": [
+            {
+                "nombreSalon": "Sala 1",
+                "capacidad": 40,
+                "recursos": ["computadoras de escritorio", "internet", "impresoras", "escáner"]
+            },
+            {
+                "nombreSalon": "Sala 2",
+                "capacidad": 40,
+                "recursos": ["computadoras de alto rendimiento", "software especializado"]
+            },
+            {
+                "nombreSalon": "Sala de Servidores",
+                "capacidad": 5,
+                "recursos": ["servidores", "sistema de enfriamiento", "acceso restringido"]
+            }
+        ]
+    }
+]

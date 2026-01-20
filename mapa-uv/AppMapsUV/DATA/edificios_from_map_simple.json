@@ -1,0 +1,62 @@
+[
+  {
+    "id": "n0",
+    "nombreEdificio": "n0",
+    "coordX": 0.0,
+    "coordY": 0.0
+  },
+  {
+    "id": "n1",
+    "nombreEdificio": "n1",
+    "coordX": 5258.0,
+    "coordY": 4627.0
+  },
+  {
+    "id": "n2",
+    "nombreEdificio": "n2",
+    "coordX": 1974.0,
+    "coordY": 3553.5
+  },
+  {
+    "id": "n3",
+    "nombreEdificio": "n3",
+    "coordX": 0.0,
+    "coordY": 17.9492
+  },
+  {
+    "id": "n4",
+    "nombreEdificio": "n4",
+    "coordX": -14.5508,
+    "coordY": 32.5
+  },
+  {
+    "id": "n5",
+    "nombreEdificio": "n5",
+    "coordX": -32.5,
+    "coordY": 32.5
+  },
+  {
+    "id": "n6",
+    "nombreEdificio": "n6",
+    "coordX": -17.9492,
+    "coordY": 0.0
+  },
+  {
+    "id": "n7",
+    "nombreEdificio": "n7",
+    "coordX": -32.5,
+    "coordY": -14.5508
+  },
+  {
+    "id": "n8",
+    "nombreEdificio": "n8",
+    "coordX": -32.5,
+    "coordY": -32.5
+  },
+  {
+    "id": "n9",
+    "nombreEdificio": "n9",
+    "coordX": 0.0,
+    "coordY": -17.9492
+  }
+]

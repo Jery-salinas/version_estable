@@ -1,0 +1,14 @@
+[
+  {
+    "id": "cafeteria",
+    "nombreEdificio": "CAFETERIA",
+    "coordX": 450,
+    "coordY": 520
+  },
+  {
+    "id": "edificio_a",
+    "nombreEdificio": "EDIFICIO A",
+    "coordX": 320,
+    "coordY": 180
+  }
+]

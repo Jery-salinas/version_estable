@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calibrador de Coordenadas - Mapa UV</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Poppins", sans-serif;
+        background: #1a1a2e;
+        color: white;
+        min-height: 100vh;
+      }
+      .header {
+        background: #007849;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .header h1 {
+        font-size: 18px;
+      }
+      .container {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        height: calc(100vh - 60px);
+      }
+      .map-area {
+        position: relative;
+        overflow: hidden;
+        background: #f5f5f5;
+      }
+      #svgContainer {
+        width: 100%;
+        height: 100%;
+        cursor: crosshair;
+      }
+      #svgContainer svg {
+        width: 100%;
+        height: 100%;
+      }
+      .sidebar {
+        background: #16213e;
+        padding: 20px;
+        overflow-y: auto;
+      }
+      .section {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+      }
+      .section h3 {
+        color: #00d4ff;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      .coord-display {
+        background: #000;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 16px;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      .coord-display span {
+        color: #4ecdc4;
+      }
+      .btn {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-family: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        margin-bottom: 8px;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background: #007849;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #005d39;
+      }
+      .btn-secondary {
+        background: #333;
+        color: white;
+      }
+      .btn-secondary:hover {
+        background: #444;
+      }
+      .btn-danger {
+        background: #e74c3c;
+        color: white;
+      }
+      .btn-danger:hover {
+        background: #c0392b;
+      }
+
+      .points-list {
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .point-item {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .point-item .name {
+        color: #4ecdc4;
+        font-weight: 600;
+      }
+      .point-item .coords {
+        color: #999;
+        font-family: monospace;
+      }
+      .point-item button {
+        background: #e74c3c;
+        border: none;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #333;
+        border-radius: 6px;
+        background: #0a0a15;
+        color: white;
+        font-family: inherit;
+        margin-bottom: 10px;
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: #007849;
+      }
+
+      .marker {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        background: #ff6b6b;
+        border: 3px solid white;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      }
+      .marker.waypoint {
+        background: #4ecdc4;
+        width: 14px;
+        height: 14px;
+      }
+      .marker.edificio {
+        background: #ff6b6b;
+      }
+
+      .marker-label {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        white-space: nowrap;
+        transform: translate(-50%, -150%);
+        pointer-events: none;
+      }
+
+      #output {
+        background: #000;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 11px;
+        white-space: pre-wrap;
+        max-height: 200px;
+        overflow-y: auto;
+        color: #4ecdc4;
+      }
+
+      .instructions {
+        background: rgba(0, 212, 255, 0.1);
+        border-left: 4px solid #00d4ff;
+        padding: 10px;
+        margin-bottom: 15px;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🎯 Calibrador de Coordenadas</h1>
+      <span id="status">Cargando mapa...</span>
+    </div>
+
+    <div class="container">
+      <div class="map-area">
+        <div id="svgContainer"></div>
+        <div id="markers"></div>
+      </div>
+
+      <div class="sidebar">
+        <div class="instructions">
+          <strong>Instrucciones:</strong><br />
+          1. Haz clic en el mapa para obtener coordenadas<br />
+          2. Escribe el nombre del punto<br />
+          3. Selecciona si es edificio o waypoint<br />
+          4. Guarda el punto<br />
+          5. Repite para cada punto de la ruta
+        </div>
+
+        <div class="section">
+          <h3>📍 Coordenadas actuales</h3>
+          <div class="coord-display">
+            X: <span id="coordX">-</span> &nbsp; Y: <span id="coordY">-</span>
+          </div>
+
+          <input
+            type="text"
+            id="pointName"
+            placeholder="Nombre (ej: cafeteria, wp1)"
+          />
+
+          <select id="pointType">
+            <option value="edificio">🏢 Edificio</option>
+            <option value="waypoint">📍 Waypoint</option>
+          </select>
+
+          <button class="btn btn-primary" onclick="guardarPunto()">
+            ✓ Guardar Punto
+          </button>
+        </div>
+
+        <div class="section">
+          <h3>📋 Puntos guardados</h3>
+          <div class="points-list" id="pointsList"></div>
+          <button class="btn btn-danger" onclick="limpiarPuntos()">
+            🗑️ Limpiar todos
+          </button>
+        </div>
+
+        <div class="section">
+          <h3>📤 Código generado</h3>
+          <button class="btn btn-secondary" onclick="generarCodigo()">
+            Generar código JS
+          </button>
+          <button class="btn btn-secondary" onclick="copiarCodigo()">
+            📋 Copiar
+          </button>
+          <div id="output"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let puntos = [];
+      let currentX = 0;
+      let currentY = 0;
+
+      // Cargar SVG
+      fetch("AppMapsUV/assets/MapUVNew.svg")
+        .then((r) => (r.ok ? r.text() : Promise.reject("SVG no encontrado")))
+        .then((svg) => {
+          document.getElementById("svgContainer").innerHTML = svg;
+          document.getElementById("status").textContent = "Mapa cargado ✓";
+          setupClickHandler();
+        })
+        .catch((err) => {
+          document.getElementById("svgContainer").innerHTML = `
+                    <svg viewBox="0 0 1056 816" style="background:#f0f0f0">
+                        <text x="528" y="400" text-anchor="middle" fill="#666">
+                            SVG no encontrado - Coloca MapUVNew.svg en AppMapsUV/assets/
+                        </text>
+                    </svg>
+                `;
+          document.getElementById("status").textContent = "Error: " + err;
+          setupClickHandler();
+        });
+
+      function setupClickHandler() {
+        const container = document.getElementById("svgContainer");
+        const svg = container.querySelector("svg");
+
+        container.addEventListener("click", (e) => {
+          const rect = svg.getBoundingClientRect();
+          const viewBox = svg.viewBox.baseVal;
+
+          // Calcular coordenadas en el espacio del viewBox
+          const scaleX = viewBox.width / rect.width;
+          const scaleY = viewBox.height / rect.height;
+
+          currentX = Math.round((e.clientX - rect.left) * scaleX);
+          currentY = Math.round((e.clientY - rect.top) * scaleY);
+
+          document.getElementById("coordX").textContent = currentX;
+          document.getElementById("coordY").textContent = currentY;
+
+          // Mostrar marcador temporal
+          mostrarMarcadorTemporal(e.clientX, e.clientY);
+        });
+      }
+
+      function mostrarMarcadorTemporal(screenX, screenY) {
+        const container = document.getElementById("svgContainer");
+        const rect = container.getBoundingClientRect();
+
+        // Remover marcador temporal anterior
+        const temp = document.getElementById("tempMarker");
+        if (temp) temp.remove();
+
+        const marker = document.createElement("div");
+        marker.id = "tempMarker";
+        marker.className = "marker";
+        marker.style.cssText = `
+                position: fixed;
+                left: ${screenX}px;
+                top: ${screenY}px;
+                background: #ffeb3b;
+                animation: pulse 0.5s ease;
+            `;
+        document.body.appendChild(marker);
+      }
+
+      function guardarPunto() {
+        const nombre = document.getElementById("pointName").value.trim();
+        const tipo = document.getElementById("pointType").value;
+
+        if (!nombre) {
+          alert("Escribe un nombre para el punto");
+          return;
+        }
+
+        if (currentX === 0 && currentY === 0) {
+          alert("Haz clic en el mapa primero");
+          return;
+        }
+
+        // Verificar si ya existe
+        const existe = puntos.find((p) => p.nombre === nombre);
+        if (existe) {
+          if (!confirm(`"${nombre}" ya existe. ¿Reemplazar?`)) return;
+          puntos = puntos.filter((p) => p.nombre !== nombre);
+        }
+
+        puntos.push({
+          nombre,
+          tipo,
+          x: currentX,
+          y: currentY,
+        });
+
+        document.getElementById("pointName").value = "";
+        actualizarLista();
+        actualizarMarcadores();
+      }
+
+      function actualizarLista() {
+        const lista = document.getElementById("pointsList");
+        lista.innerHTML = puntos
+          .map(
+            (p, i) => `
+                <div class="point-item">
+                    <div>
+                        <div class="name">${
+                          p.tipo === "edificio" ? "🏢" : "📍"
+                        } ${p.nombre}</div>
+                        <div class="coords">x: ${p.x}, y: ${p.y}</div>
+                    </div>
+                    <button onclick="eliminarPunto(${i})">×</button>
+                </div>
+            `
+          )
+          .join("");
+      }
+
+      function actualizarMarcadores() {
+        const container = document.getElementById("svgContainer");
+        const svg = container.querySelector("svg");
+        const rect = svg.getBoundingClientRect();
+        const viewBox = svg.viewBox.baseVal;
+
+        // Remover marcadores anteriores
+        document.querySelectorAll(".saved-marker").forEach((m) => m.remove());
+
+        puntos.forEach((p) => {
+          const screenX = rect.left + (p.x / viewBox.width) * rect.width;
+          const screenY = rect.top + (p.y / viewBox.height) * rect.height;
+
+          const marker = document.createElement("div");
+          marker.className = `marker saved-marker ${p.tipo}`;
+          marker.style.cssText = `
+                    position: fixed;
+                    left: ${screenX}px;
+                    top: ${screenY}px;
+                `;
+
+          const label = document.createElement("div");
+          label.className = "marker-label";
+          label.textContent = p.nombre;
+          marker.appendChild(label);
+
+          document.body.appendChild(marker);
+        });
+      }
+
+      function eliminarPunto(index) {
+        puntos.splice(index, 1);
+        actualizarLista();
+        actualizarMarcadores();
+      }
+
+      function limpiarPuntos() {
+        if (confirm("¿Eliminar todos los puntos?")) {
+          puntos = [];
+          actualizarLista();
+          actualizarMarcadores();
+        }
+      }
+
+      function generarCodigo() {
+        const edificios = puntos.filter((p) => p.tipo === "edificio");
+        const waypoints = puntos.filter((p) => p.tipo === "waypoint");
+
+        let codigo = `// ============================================
+// DATOS CALIBRADOS DEL MAPA
+// ============================================
+
+const EDIFICIOS = {
+${edificios
+  .map(
+    (e) =>
+      `    ${e.nombre}: { nombre: "${e.nombre
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase())}", x: ${e.x}, y: ${e.y} }`
+  )
+  .join(",\n")}
+};
+
+const WAYPOINTS = {
+${waypoints.map((w) => `    ${w.nombre}: { x: ${w.x}, y: ${w.y} }`).join(",\n")}
+};
+
+// Orden de puntos para copiar en RUTAS:
+// ${puntos.map((p) => p.nombre).join(" → ")}
+`;
+
+        document.getElementById("output").textContent = codigo;
+      }
+
+      function copiarCodigo() {
+        const codigo = document.getElementById("output").textContent;
+        navigator.clipboard.writeText(codigo).then(() => {
+          alert("Código copiado al portapapeles");
+        });
+      }
+
+      // Actualizar marcadores al redimensionar
+      window.addEventListener("resize", actualizarMarcadores);
+    </script>
+  </body>
+</html>
